@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satwa Squad — Kartu pengundang</title>
+<style>body{font-family:system-ui,sans-serif;background:#0d0a06;color:#f5ead2;margin:0;padding:24px}.wrap{max-width:640px;margin:0 auto}.gold{color:#f0b90b}.card{background:#1a1409;border:1px solid #f0b90b55;border-radius:16px;padding:20px}</style>
+</head>
+<body>
+<div class="wrap">
+ <p class="gold">🐾 SATWA SQUAD</p>
+ <div class="card">
+  <h1 id="title">Kartu …</h1>
+  <p id="desc">Kamu diundang untuk mint kartu hero gratis (hanya gas) — satu untuk setiap wallet dengan Binance Agent ID (.ai).</p>
+  <p id="ref"></p>
+  <p><a href="./index.html" style="color:#f0b90b">→ Mint kartumu</a></p>
+ </div>
+ <p><small>Halaman ini meniru pola <code>/a/&lt;nama&gt;?ref=KODE</code>: nama dari URL, kode referral dari query string. Di GitHub Pages, file 404.html mengarahkan /a/&lt;nama&gt; ke halaman ini.</small></p>
+</div>
+<script>
+ const q=new URLSearchParams(location.search);
+ const name=q.get('n')||location.pathname.split('/a/')[1]||'agent';
+ const ref=q.get('ref')||'';
+ document.getElementById('title').textContent='Kartu '+name;
+ if(ref) document.getElementById('ref').textContent='Kode undangan: '+ref+' — kode ini tercatat untuk pengundang saat kamu mint.';
+</script>
+</body>
+</html>

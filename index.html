@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satwa Squad — Free mint NFT untuk Agent ID (.ai)</title>
+<meta name="description" content="Satu NFT satwa liar Indonesia gratis untuk setiap wallet Binance Agent ID (.ai) di BNB Chain. Mint gratis, hanya gas. 10.000 Genesis pertama.">
+<style>
+ body{font-family:system-ui,sans-serif;background:#07130b;color:#eaffea;margin:0;padding:24px}
+ .wrap{max-width:760px;margin:0 auto}
+ h1{font-size:2rem;margin:.2em 0} .lime{color:#8ee63a}
+ .card{background:#0e2013;border:1px solid #8ee63a55;border-radius:16px;padding:20px;margin:16px 0}
+ button{background:#8ee63a;color:#0a1408;border:0;border-radius:10px;padding:12px 18px;font-weight:700;cursor:pointer}
+ input,select{background:#0a1a0e;color:#eaffea;border:1px solid #8ee63a55;border-radius:8px;padding:10px}
+ small{opacity:.75} code{background:#000;padding:2px 6px;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <p class="lime">🐾 SATWA SQUAD · BNB CHAIN</p>
+ <h1>Satu NFT satwa <span class="lime">gratis</span> untuk setiap Agent ID</h1>
+ <p>16 satwa liar Indonesia — Komodo, Garuda, Cendrawasih, Kasuari, dan lainnya — jadi squad NFT.
+ Wallet yang memegang Binance Agent ID (<code>.ai</code>) bisa mint 1 kartu <b>gratis</b>:
+ harga mint 0, hanya bayar gas. 10.000 pertama adalah <b>Genesis</b>.</p>
+
+ <div class="card">
+  <h2>Preview squad-mu</h2>
+  <p><small>Stat di-roll deterministik dari alamat wallet-mu.</small></p>
+  <input id="wallet" placeholder="0x… alamat wallet" size="46">
+  <button id="previewBtn">Preview</button>
+  <div id="preview"></div>
+ </div>
+
+ <div class="card">
+  <h2>Cara mint (untuk agent-mu)</h2>
+  <ol>
+   <li>Pegang <b>.ai Agent ID</b> di Binance App → Agentic Wallet (klaim gratis di app).</li>
+   <li>Kasih prompt ini ke AI agent-mu:<br>
+   <code>Mint 1 Satwa Squad gratis mengikuti panduan di skill.md situs ini. Cek dulu wallet-ku memegang Agent ID, lalu preview kontrak sebelum execute.</code></li>
+   <li>Atau mint dari halaman ini dengan wallet browser.</li>
+  </ol>
+  <label>Habitat
+   <select id="region"><option value="0">Jungle</option><option value="1">Ocean</option><option value="2">Sky</option><option value="3">Island</option></select>
+  </label>
+  <label>Role
+   <select id="role"><option value="0">Guardian</option><option value="1">Shaman</option><option value="2">Mystic</option><option value="3">Stalker</option></select>
+  </label>
+  <button id="mintBtn">Mint gratis</button>
+  <p id="mintStatus"><small>Kontrak belum di-deploy — isi <code>site/config.js</code> setelah deploy.</small></p>
+ </div>
+
+ <div class="card">
+  <h2>Undang agent lain</h2>
+  <p>Link kartumu berbentuk:<br><code id="refLink">…/a/namakamu?ref=KODEMU</code></p>
+  <p><small>Referral tercatat on-chain di kontrak. Jual lagi kartumu di marketplace — royalti kreator 5% (ERC-2981).</small></p>
+ </div>
+ <p><small>Project independen, tidak berafiliasi dengan Binance / SPACE ID. NFT koleksi saja, tidak ada janji nilai atau return. Kontrak: <span id="contractAddr">belum di-deploy</span></small></p>
+</div>
+<script src="config.js"></script>
+<script>
+ const CLASSES={0:["Komodo Guardian","Sea Turtle Guardian","Garuda Guardian","Anoa Guardian"],1:["Orangutan Shaman","Dolphin Shaman","Owl Shaman","Tarsier Shaman"],2:["Tree Frog Mystic","Octopus Mystic","Peacock Mystic","Cendrawasih Mystic"],3:["Tiger Stalker","Shark Stalker","Falcon Stalker","Cassowary Stalker"]};
+ const REGIONS=["Jungle","Ocean","Sky","Island"], ROLES=["Guardian","Shaman","Mystic","Stalker"];
+ function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+ function roll(addr){let x=hashStr(addr.toLowerCase());const n=()=>{x^=x<<13;x^=x>>>17;x^=x<<5;x>>>=0;return 40+(x%60)};const t=hashStr(addr.toLowerCase()+"tier")%100;return{p:n(),d:n(),s:n(),l:n(),rarity:t<60?"Common":t<87?"Rare":t<97?"Epic":"Legendary"}}
+ document.getElementById('previewBtn').onclick=()=>{
+   const a=document.getElementById('wallet').value.trim(); if(!/^0x[0-9a-fA-F]{40}$/.test(a)){alert('Alamat wallet tidak valid');return}
+   const r=roll(a), reg=+document.getElementById('region').value, role=+document.getElementById('role').value;
+   document.getElementById('preview').innerHTML=`<p>🃏 <b>${CLASSES[role][reg]}</b> · ${REGIONS[reg]} ${ROLES[role]} · <b>${r.rarity}</b></p><p>Power ${r.p} · Defense ${r.d} · Speed ${r.s} · Luck ${r.l}</p>`;
+   document.getElementById('refLink').textContent=(location.origin+location.pathname.replace(/[^/]*$/,''))+'a/agentkamu?ref='+a.slice(2,10).toUpperCase();
+ };
+ const cfg=window.SATWA_CONFIG||{};
+ if(cfg.cardsContract) document.getElementById('contractAddr').textContent=cfg.cardsContract;
+ document.getElementById('mintBtn').onclick=async()=>{
+   const st=document.getElementById('mintStatus');
+   if(!window.ethereum){st.textContent='Tidak ada wallet browser. Untuk Agentic Wallet, mint lewat agent-mu (baw), bukan halaman ini.';return}
+   if(!cfg.cardsContract){st.textContent='Kontrak belum di-deploy.';return}
+   st.textContent='Membuka wallet… (mint gratis, hanya gas)';
+ };
+</script>
+</body>
+</html>

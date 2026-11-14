@@ -1,0 +1,4 @@
+<!doctype html><meta charset="utf-8"><script>
+// GitHub Pages SPA trick: /a/<nama>?ref=KODE -> /a.html?n=<nama>&ref=KODE
+(function(){var p=location.pathname.split('/a/');if(p.length>1){var q=new URLSearchParams(location.search);q.set('n',decodeURIComponent(p[1]));location.replace(location.pathname.split('/a/')[0]+'/a.html?'+q.toString());}else{document.body.textContent='404';}})();
+</script>
