@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Hunt 1 token matrix runner v3</title>
+<style>body{font-family:system-ui,sans-serif;margin:2rem;max-width:1100px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 8px;font-size:13px;text-align:left}.bad{background:#ffd7d7}.ok{background:#e7f7e7}textarea{width:100%;height:220px}</style>
+</head><body>
+<h1>Hunt 1 — token permission matrix runner v3</h1>
+<p>Client-side only. The token is used solely in Authorization headers to api.github.com from this page and is never stored or sent anywhere else. v2 adds response-body snippets for failed rows and search-query diagnostics in the fg-control profile.</p>
+<p><label>Token: <input type="password" id="tok" size="60" autocomplete="off"></label>
+<label>Profile: <select id="prof">
+<option value="fix-control">fix-control</option>
+<option value="fix-issues">fix-issues</option>
+<option value="fix-prs">fix-prs</option>
+<option value="fix-contents">fix-contents</option>
+<option value="fix-meta">fix-meta</option>
+<option value="cl-control">cl-control</option>
+<option value="cl-deny">cl-deny</option>
+</select></label>
+<button id="run">Run matrix</button></p>
+<table id="tbl"><thead><tr><th>Row</th><th>Request</th><th>Status</th><th>Canary</th><th>Expected</th><th>Verdict</th><th>Body snippet ( failures only )</th></tr></thead><tbody></tbody></table>
+<h3>TSV summary (copy this)</h3>
+<textarea id="tsv" readonly></textarea>
+<script>
+const C='yinzzhou99-hunt/hunt-canary', N='yinzzhou99-hunt/hunt-neighbour', R='9f4a2c7d',
+SHA='307fcd9d57ad82fb30db54091ed884c2f76685db';
+const CODE='HUNT1-CODE-'+R, COMMIT='HUNT1-COMMIT-'+R, ISSUE='HUNT1-ISSUE-BODY-'+R,
+ISSCMT='HUNT1-ISSUE-COMMENT-'+R, PR='HUNT1-PR-BODY-'+R, PRDIFF='HUNT1-PR-DIFF-'+R,
+PRCMT='HUNT1-PR-COMMIT-'+R, REVIEW='HUNT1-REVIEW-'+R, REVIEWCMT='HUNT1-REVIEW-COMMENT-'+R,
+DESC='HUNT1-REPO-DESC-'+R, NDESC='HUNT1-NEIGHBOUR-DESC-'+R, NFILE='HUNT1-NEIGHBOUR-FILE-'+R,
+ITITLE='HUNT1 issue fixture';
+const q=s=>encodeURIComponent(s);
+const SC=(canary,repo)=>'/search/code?q='+q(canary+' repo:'+repo);
+const SM=(canary,repo)=>'/search/commits?q='+q(canary+' repo:'+repo);
+const SI=(canary,repo)=>'/search/issues?q='+q(canary+' repo:'+repo);
+const GQL_IP='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){title body}pullRequest(number:2){title body}}}';
+const GQL_PRREV='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){pullRequest(number:2){title body reviews(first:5){nodes{body}}}}}';
+const GQL_BLOB='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){object(expression:"main:canary.txt"){... on Blob{text}}}}';
+const GQL_ISSUE='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){title body comments(first:5){nodes{body}}}}}';
+const GQL_SEARCH='{search(query:"'+ISSUE+' repo:'+C+'",type:ISSUE,first:5){nodes{... on Issue{title body}}}}';
+const GQL_ISSREV='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){body}pullRequest(number:2){reviews(first:5){nodes{body}}}}}';
+const GQL_ISSBLOB='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){body}object(expression:"main:canary.txt"){... on Blob{text}}}}';
+const GQL_VIEWER='{viewer{repositories(first:20,privacy:PRIVATE){nodes{name description}}}}';
+const PROFILES={
+'fix-control':[
+ ['x1','GET','/search/issues?q='+q(ISSCMT+' repo:'+C+' type:issue'),ISSCMT,'present',{tm:1,delay:2600}],
+ ['x2','GET',SC(CODE,C),CODE,'present',{delay:7000}]],
+'fix-issues':[
+ ['x1','GET','/search/issues?q='+q(ISSCMT+' repo:'+C+' type:issue'),ISSCMT,'present',{tm:1,delay:2600}],
+ ['x2','GET',SC(CODE,C),CODE,'absent',{delay:7000}]],
+'fix-prs':[
+ ['x1','GET','/search/issues?q='+q(ISSCMT+' repo:'+C+' type:issue'),ISSCMT,'absent',{tm:1,delay:2600}],
+ ['x2','GET',SC(CODE,C),CODE,'absent',{delay:7000}]],
+'fix-contents':[
+ ['x1','GET','/search/issues?q='+q(ISSUE+' repo:'+C+' type:issue'),ISSUE,'absent',{delay:2600}],
+ ['x2','GET',SC(CODE,C),CODE,'absent',{delay:7000}]],
+'fix-meta':[
+ ['x1','GET','/search/issues?q='+q(ISSUE+' repo:'+C+' type:issue'),ISSUE,'absent',{delay:2600}],
+ ['x2','GET',SC(CODE,C),CODE,'absent',{delay:7000}]],
+'cl-control':[
+ ['c1','GET','/repos/'+C,null,'ok200',{}],
+ ['c2','GET','/repos/'+C+'/issues',ISSUE,'present',{}],
+ ['c3','GET','/repos/'+C+'/contents/canary.txt',CODE,'present',{b64:1}],
+ ['c5','GET','/repos/'+C+'/notifications?all=true',ITITLE,'present',{}],
+ ['c6','GET','/repos/'+C+'/issues/1/timeline',ISSCMT,'present',{}],
+ ['c7','GET','/repos/'+C+'/commits/'+SHA+'/pulls',PRCMT,'present',{}],
+ ['c8','GET','/repos/'+C+'/compare/main...canary-branch',CODE,'present',{}],
+ ['c9','GQL',GQL_IP,ISSUE,'present',{}],
+ ['c10','GQL',GQL_VIEWER,DESC,'present',{}],
+ ['c11','GET','/user/repos?visibility=private',DESC,'present',{}],
+ ['c12','GET','/search/repositories?q='+q(DESC),DESC,'present',{delay:2600}],
+ ['c4','GET',SC(CODE,C),CODE,'present',{delay:7000}]],
+'cl-deny':[
+ ['c1','GET','/repos/'+C,DESC,'absent',{}],
+ ['c2','GET','/repos/'+C+'/issues',ISSUE,'absent',{}],
+ ['c3','GET','/repos/'+C+'/contents/canary.txt',CODE,'absent',{b64:1}],
+ ['c5','GET','/repos/'+C+'/notifications?all=true',ITITLE,'absent',{}],
+ ['c5b','GET','/notifications?all=true',ITITLE,'absent',{}],
+ ['c6','GET','/repos/'+C+'/issues/1/timeline',ISSCMT,'absent',{}],
+ ['c7','GET','/repos/'+C+'/commits/'+SHA+'/pulls',PRCMT,'absent',{}],
+ ['c8','GET','/repos/'+C+'/compare/main...canary-branch',CODE,'absent',{}],
+ ['c9','GQL',GQL_IP,ISSUE,'absent',{}],
+ ['c10','GQL',GQL_VIEWER,DESC,'absent',{}],
+ ['c11','GET','/user/repos?visibility=private',DESC,'absent',{}],
+ ['c12','GET','/search/repositories?q='+q(DESC),DESC,'absent',{delay:2600}],
+ ['c4','GET',SC(CODE,C),CODE,'absent',{delay:7000}]]
+};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+document.getElementById('run').onclick=async()=>{
+ const tok=document.getElementById('tok').value.trim();
+ const prof=document.getElementById('prof').value;
+ const rows=PROFILES[prof], tb=document.querySelector('#tbl tbody'), tsv=document.getElementById('tsv');
+ tb.innerHTML=''; tsv.value='';
+ if(!tok){alert('Paste a token first');return;}
+ for(const [id,m,path,canary,exp,o] of rows){
+  if(o.delay) await sleep(o.delay); else await sleep(900);
+  let status='ERR', body='', errMsg='';
+  try{
+   const headers={Authorization:'Bearer '+tok,Accept:o.tm?'application/vnd.github.text-match+json':'application/vnd.github+json'};
+   let resp;
+   if(m==='GQL'){resp=await fetch('https://api.github.com/graphql',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({query:path})});}
+   else{resp=await fetch('https://api.github.com'+path,{headers});}
+   status=resp.status; body=await resp.text();
+   if(o.b64){try{const j=JSON.parse(body); if(j.content) body+='\n'+atob(j.content.replace(/\s/g,''));}catch(e){}}
+  }catch(e){errMsg=e.name+': '+e.message;}
+  const hit=canary?body.includes(canary):null;
+  let verdict;
+  if(exp==='present') verdict=hit?'OK':'UNEXPECTED-MISSING';
+  else if(exp==='absent') verdict=hit?'*** CANARY LEAK ***':'OK';
+  else if(exp==='ok200') verdict=(status===200)?'OK':'UNEXPECTED-STATUS';
+  else verdict='INFO';
+  const failed=(status==='ERR'||(typeof status==='number'&&status>=400)||verdict.startsWith('*')||verdict.startsWith('UNEXPECTED'));
+  const snippet=failed?((errMsg?('FETCH '+errMsg+' | '):'')+body.replace(/[\t\r\n]+/g,' ').slice(0,250)):'';
+  const tr=document.createElement('tr'); tr.className=failed?'bad':'ok';
+  const label=(m==='GQL'?'GraphQL':path);
+  tr.innerHTML='<td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+  tr.children[0].textContent=prof+'/'+id; tr.children[1].textContent=label; tr.children[2].textContent=status;
+  tr.children[3].textContent=canary?(hit?'HIT':'absent'):'-'; tr.children[4].textContent=exp;
+  tr.children[5].textContent=verdict; tr.children[6].textContent=snippet;
+  tb.appendChild(tr);
+  tsv.value+=[prof,id,label,status,canary?(hit?'HIT':'absent'):'-',exp,verdict,snippet].join('\t')+'\n';
+ }
+ tsv.value+='DONE '+prof+'\n';
+};
+</script>
+</body></html>
