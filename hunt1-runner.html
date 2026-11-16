@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Hunt 1 token matrix runner</title>
+<style>body{font-family:system-ui,sans-serif;margin:2rem;max-width:1100px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:4px 8px;font-size:13px;text-align:left}.bad{background:#ffd7d7}.ok{background:#e7f7e7}textarea{width:100%;height:180px}</style>
+</head><body>
+<h1>Hunt 1 — token permission matrix runner</h1>
+<p>Client-side only. The token is used solely in Authorization headers to api.github.com from this page and is never stored or sent anywhere else.</p>
+<p><label>Token: <input type="password" id="tok" size="60" autocomplete="off"></label>
+<label>Profile: <select id="prof">
+<option value="fg-control">fg-control</option>
+<option value="fg-issues">fg-issues</option>
+<option value="fg-prs">fg-prs</option>
+<option value="fg-contents">fg-contents</option>
+<option value="fg-meta">fg-meta</option>
+<option value="cl-control">cl-control</option>
+<option value="cl-deny">cl-deny (none/org/gist)</option>
+</select></label>
+<button id="run">Run matrix</button></p>
+<table id="tbl"><thead><tr><th>Row</th><th>Request</th><th>Status</th><th>Canary</th><th>Expected</th><th>Verdict</th><th>Accepted-Permissions / OAuth-Scopes</th></tr></thead><tbody></tbody></table>
+<h3>TSV summary (copy this)</h3>
+<textarea id="tsv" readonly></textarea>
+<script>
+const C='yinzzhou99-hunt/hunt-canary', N='yinzzhou99-hunt/hunt-neighbour', R='9f4a2c7d',
+SHA='307fcd9d57ad82fb30db54091ed884c2f76685db';
+const CODE='HUNT1-CODE-'+R, COMMIT='HUNT1-COMMIT-'+R, ISSUE='HUNT1-ISSUE-BODY-'+R,
+ISSCMT='HUNT1-ISSUE-COMMENT-'+R, PR='HUNT1-PR-BODY-'+R, PRDIFF='HUNT1-PR-DIFF-'+R,
+PRCMT='HUNT1-PR-COMMIT-'+R, REVIEW='HUNT1-REVIEW-'+R, REVIEWCMT='HUNT1-REVIEW-COMMENT-'+R,
+DESC='HUNT1-REPO-DESC-'+R, NDESC='HUNT1-NEIGHBOUR-DESC-'+R, NFILE='HUNT1-NEIGHBOUR-FILE-'+R,
+ITITLE='HUNT1 issue fixture';
+const q=s=>encodeURIComponent(s);
+const SC=(canary,repo)=>'/search/code?q='+q(canary+' repo:'+repo);
+const SM=(canary,repo)=>'/search/commits?q='+q(canary+' repo:'+repo);
+const SI=(canary,repo,tm)=>'/search/issues?q='+q(canary+' repo:'+repo);
+const GQL_IP='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){title body}pullRequest(number:2){title body}}}';
+const GQL_PRREV='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){pullRequest(number:2){title body reviews(first:5){nodes{body}}}}}';
+const GQL_BLOB='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){object(expression:"main:canary.txt"){... on Blob{text}}}}';
+const GQL_ISSUE='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){title body comments(first:5){nodes{body}}}}}';
+const GQL_SEARCH='{search(query:"'+ISSUE+' repo:'+C+'",type:ISSUE,first:5){nodes{... on Issue{title body}}}}';
+const GQL_ISSREV='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){body}pullRequest(number:2){reviews(first:5){nodes{body}}}}}';
+const GQL_ISSBLOB='{repository(owner:"yinzzhou99-hunt",name:"hunt-canary"){issue(number:1){body}object(expression:"main:canary.txt"){... on Blob{text}}}}';
+const GQL_VIEWER='{viewer{repositories(first:20,privacy:PRIVATE){nodes{name description}}}}';
+// row: [id, method, pathOrQuery, canary, expect('present'|'absent'|'ok200'|'any'), opts{b64,tm,delay}]
+const PROFILES={
+'fg-control':[
+ ['c1','GET','/repos/'+C+'/issues',ISSUE,'present',{}],
+ ['c2','GET','/repos/'+C+'/issues/1/comments',ISSCMT,'present',{}],
+ ['c3','GET','/repos/'+C+'/pulls',PR,'present',{}],
+ ['c4','GET','/repos/'+C+'/pulls/2/reviews',REVIEW,'present',{}],
+ ['c5','GET','/repos/'+C+'/contents/canary.txt',CODE,'present',{b64:1}],
+ ['c6','GET','/repos/'+C+'/commits',COMMIT,'present',{}],
+ ['c7','GQL',GQL_IP,ISSUE,'present',{}],
+ ['c8','GET',SC(CODE,C),CODE,'present',{delay:7000}],
+ ['c9','GET',SI(ISSUE,C),ISSUE,'present',{delay:2600}]],
+'fg-issues':[
+ ['a1','GET','/repos/'+C+'/issues',ISSUE,'present',{}],
+ ['a2','GET','/repos/'+C+'/issues/1/comments',ISSCMT,'present',{}],
+ ['d1','GET','/repos/'+C+'/pulls',PR,'absent',{}],
+ ['d2','GET','/repos/'+C+'/pulls/2',PR,'absent',{}],
+ ['d3','GET','/repos/'+C+'/pulls/2/reviews',REVIEW,'absent',{}],
+ ['d4','GET','/repos/'+C+'/pulls/2/reviews/5925142677/comments',REVIEWCMT,'absent',{}],
+ ['d5','GET','/repos/'+C+'/pulls/comments',REVIEWCMT,'absent',{}],
+ ['d6','GET','/repos/'+C+'/pulls/2/files',PRDIFF,'absent',{}],
+ ['d7','GET','/repos/'+C+'/pulls/2/commits',PRCMT,'absent',{}],
+ ['d8','GET','/repos/'+C+'/contents/canary.txt',CODE,'absent',{b64:1}],
+ ['d9','GET','/repos/'+C+'/commits',COMMIT,'absent',{}],
+ ['d10','GET','/repos/'+C+'/commits/'+SHA,COMMIT,'absent',{}],
+ ['d11','GET','/repos/'+C+'/compare/main...canary-branch',CODE,'absent',{}],
+ ['d12','GET','/repos/'+C+'/commits/'+SHA+'/pulls',PRCMT,'absent',{}],
+ ['g1','GQL',GQL_PRREV,REVIEW,'absent',{}],
+ ['g2','GQL',GQL_BLOB,CODE,'absent',{}],
+ ['g3','GQL',GQL_ISSUE,ISSUE,'present',{}],
+ ['s1','GET',SC(CODE,C),CODE,'absent',{delay:7000}],
+ ['s2','GET',SM(COMMIT,C),COMMIT,'absent',{delay:2600}],
+ ['s3','GET',SI(ISSCMT,C),ISSCMT,'present',{tm:1,delay:2600}],
+ ['n1','GET','/repos/'+N,NDESC,'absent',{}],
+ ['n2','GET','/repos/'+N+'/contents/neighbour.txt',NFILE,'absent',{b64:1}],
+ ['n3','GET',SC(NFILE,N),NFILE,'absent',{delay:7000}]],
+'fg-prs':[
+ ['a1','GET','/repos/'+C+'/pulls/2/reviews',REVIEW,'present',{}],
+ ['a2','GET','/repos/'+C+'/pulls/2/reviews/5925142677/comments',REVIEWCMT,'present',{}],
+ ['d1','GET','/repos/'+C+'/issues/1/timeline',ISSCMT,'absent',{}],
+ ['d2','GET','/repos/'+C+'/issues/1/events',ISSCMT,'absent',{}],
+ ['d3','GET','/repos/'+C+'/issues/events',ISSCMT,'absent',{}],
+ ['d4','GET','/repos/'+C+'/contents/canary.txt',CODE,'absent',{b64:1}],
+ ['d5','GET','/repos/'+C+'/compare/main...canary-branch',CODE,'absent',{}],
+ ['s1','GET',SI(ISSCMT,C),ISSCMT,'absent',{tm:1,delay:2600}],
+ ['s2','GET',SC(CODE,C),CODE,'absent',{delay:7000}],
+ ['s3','GET',SM(COMMIT,C),COMMIT,'absent',{delay:2600}],
+ ['g1','GQL',GQL_ISSUE,ISSUE,'absent',{}],
+ ['g2','GQL',GQL_SEARCH,ISSUE,'absent',{}],
+ ['n1','GET','/repos/'+N,NDESC,'absent',{}],
+ ['n2','GET','/repos/'+N+'/contents/neighbour.txt',NFILE,'absent',{b64:1}]],
+'fg-contents':[
+ ['a1','GET','/repos/'+C+'/contents/canary.txt',CODE,'present',{b64:1}],
+ ['a2','GET','/repos/'+C+'/commits',COMMIT,'present',{}],
+ ['d1','GET','/repos/'+C+'/issues',ISSUE,'absent',{}],
+ ['d2','GET','/repos/'+C+'/issues/1/comments',ISSCMT,'absent',{}],
+ ['d3','GET','/repos/'+C+'/pulls/2/reviews',REVIEW,'absent',{}],
+ ['d4','GET','/repos/'+C+'/issues/1/timeline',ISSCMT,'absent',{}],
+ ['s1','GET',SI(ISSUE,C),ISSUE,'absent',{delay:2600}],
+ ['g1','GQL',GQL_ISSREV,ISSUE,'absent',{}],
+ ['n1','GET','/repos/'+N+'/contents/neighbour.txt',NFILE,'absent',{b64:1}]],
+'fg-meta':[
+ ['a1','GET','/repos/'+C,null,'ok200',{}],
+ ['d1','GET','/repos/'+C+'/issues',ISSUE,'absent',{}],
+ ['d2','GET','/repos/'+C+'/pulls',PR,'absent',{}],
+ ['d3','GET','/repos/'+C+'/contents/canary.txt',CODE,'absent',{b64:1}],
+ ['d4','GET','/repos/'+C+'/commits',COMMIT,'absent',{}],
+ ['d5','GET','/repos/'+C+'/security-advisories',null,'any',{}],
+ ['s1','GET',SC(CODE,C),CODE,'absent',{delay:7000}],
+ ['s2','GET',SM(COMMIT,C),COMMIT,'absent',{delay:2600}],
+ ['s3','GET',SI(ISSUE,C),ISSUE,'absent',{delay:2600}],
+ ['s4','GET','/search/repositories?q='+q(DESC),DESC,'absent',{delay:2600}],
+ ['g1','GQL',GQL_ISSBLOB,ISSUE,'absent',{}],
+ ['n1','GET','/repos/'+N,NDESC,'absent',{}]],
+'cl-control':[
+ ['c1','GET','/repos/'+C,null,'ok200',{}],
+ ['c2','GET','/repos/'+C+'/issues',ISSUE,'present',{}],
+ ['c3','GET','/repos/'+C+'/contents/canary.txt',CODE,'present',{b64:1}],
+ ['c5','GET','/repos/'+C+'/notifications?all=true',ITITLE,'present',{}],
+ ['c6','GET','/repos/'+C+'/issues/1/timeline',ISSCMT,'present',{}],
+ ['c7','GET','/repos/'+C+'/commits/'+SHA+'/pulls',PRCMT,'present',{}],
+ ['c8','GET','/repos/'+C+'/compare/main...canary-branch',CODE,'present',{}],
+ ['c9','GQL',GQL_IP,ISSUE,'present',{}],
+ ['c10','GQL',GQL_VIEWER,DESC,'present',{}],
+ ['c11','GET','/user/repos?visibility=private',DESC,'present',{}],
+ ['c4','GET',SC(CODE,C),CODE,'present',{delay:7000}]],
+'cl-deny':[
+ ['c1','GET','/repos/'+C,DESC,'absent',{}],
+ ['c2','GET','/repos/'+C+'/issues',ISSUE,'absent',{}],
+ ['c3','GET','/repos/'+C+'/contents/canary.txt',CODE,'absent',{b64:1}],
+ ['c5','GET','/repos/'+C+'/notifications?all=true',ITITLE,'absent',{}],
+ ['c5b','GET','/notifications?all=true',ITITLE,'absent',{}],
+ ['c6','GET','/repos/'+C+'/issues/1/timeline',ISSCMT,'absent',{}],
+ ['c7','GET','/repos/'+C+'/commits/'+SHA+'/pulls',PRCMT,'absent',{}],
+ ['c8','GET','/repos/'+C+'/compare/main...canary-branch',CODE,'absent',{}],
+ ['c9','GQL',GQL_IP,ISSUE,'absent',{}],
+ ['c10','GQL',GQL_VIEWER,DESC,'absent',{}],
+ ['c11','GET','/user/repos?visibility=private',DESC,'absent',{}],
+ ['c12','GET','/search/repositories?q='+q(DESC),DESC,'absent',{delay:2600}],
+ ['c4','GET',SC(CODE,C),CODE,'absent',{delay:7000}]]
+};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+document.getElementById('run').onclick=async()=>{
+ const tok=document.getElementById('tok').value.trim();
+ const prof=document.getElementById('prof').value;
+ const rows=PROFILES[prof], tb=document.querySelector('#tbl tbody'), tsv=document.getElementById('tsv');
+ tb.innerHTML=''; tsv.value='';
+ if(!tok){alert('Paste a token first');return;}
+ for(const [id,m,path,canary,exp,o] of rows){
+  if(o.delay) await sleep(o.delay); else await sleep(900);
+  let status='ERR', body='', hdr='';
+  try{
+   const headers={Authorization:'Bearer '+tok,Accept:o.tm?'application/vnd.github.text-match+json':'application/vnd.github+json'};
+   let resp;
+   if(m==='GQL'){resp=await fetch('https://api.github.com/graphql',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({query:path})});}
+   else{resp=await fetch('https://api.github.com'+path,{headers});}
+   status=resp.status; body=await resp.text();
+   hdr=(resp.headers.get('x-accepted-github-permissions')||'')+' '+(resp.headers.get('x-oauth-scopes')||'')+' '+(resp.headers.get('x-accepted-oauth-scopes')||'');
+   if(o.b64){try{const j=JSON.parse(body); if(j.content) body+='\n'+atob(j.content.replace(/\s/g,''));}catch(e){}}
+  }catch(e){body='FETCH-ERROR '+e.message;}
+  const hit=canary?body.includes(canary):null;
+  let verdict;
+  if(exp==='present') verdict=hit?'OK':'UNEXPECTED-MISSING';
+  else if(exp==='absent') verdict=hit?'*** CANARY LEAK ***':'OK';
+  else if(exp==='ok200') verdict=(status===200)?'OK':'UNEXPECTED-STATUS';
+  else verdict='INFO';
+  const tr=document.createElement('tr'); if(verdict.startsWith('*')||verdict.startsWith('UNEXPECTED'))tr.className='bad'; else tr.className='ok';
+  const label=(m==='GQL'?'GraphQL':path);
+  tr.innerHTML='<td>'+prof+'/'+id+'</td><td>'+label+'</td><td>'+status+'</td><td>'+(canary?(hit?'HIT':'absent'):'-')+'</td><td>'+exp+'</td><td>'+verdict+'</td><td>'+hdr.trim()+'</td>';
+  tb.appendChild(tr);
+  tsv.value+=[prof,id,label,status,canary?(hit?'HIT':'absent'):'-',exp,verdict,hdr.trim()].join('\t')+'\n';
+ }
+ tsv.value+='DONE '+prof+'\n';
+};
+</script>
+</body></html>
