@@ -1,0 +1,50 @@
+{
+  "name": "Sea Turtle Guardian #122 — Satwa Squad Genesis",
+  "description": "Satwa Squad Genesis — free-mint NFT for Binance Agent ID (.ai) holders on BNB Chain. Mint price 0, gas only. Collectible only; no promise of value.",
+  "image": "https://yinzzhou99-web.github.io/satwa-squad/image/122.svg",
+  "external_url": "https://yinzzhou99-web.github.io/satwa-squad/",
+  "attributes": [
+    {
+      "trait_type": "Class",
+      "value": "Sea Turtle Guardian"
+    },
+    {
+      "trait_type": "Habitat",
+      "value": "Ocean"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Guardian"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Power",
+      "value": 69
+    },
+    {
+      "trait_type": "Defense",
+      "value": 77
+    },
+    {
+      "trait_type": "Speed",
+      "value": 94
+    },
+    {
+      "trait_type": "Luck",
+      "value": 77
+    }
+  ],
+  "satwa": {
+    "classArt": "https://yinzzhou99-web.github.io/satwa-squad/images/ocean-guardian.png",
+    "stats": {
+      "power": 69,
+      "defense": 77,
+      "speed": 94,
+      "luck": 77,
+      "rarity": 0
+    }
+  }
+}
