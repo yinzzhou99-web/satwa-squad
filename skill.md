@@ -25,7 +25,7 @@ baw contract-call preview --binanceChainId 56 --from <alamat agent wallet> \
 
 Calldata `mint(uint8,uint8,address)` — selector `0xd20e4874`;
 region: 0=Jungle 1=Ocean 2=Sky 3=Island · role: 0=Guardian 1=Shaman 2=Mystic 3=Stalker ·
-referrer = wallet pengundang dari link `?ref=` (atau alamat nol).
+referrer = alamat wallet pengundang lengkap (0x… 40 karakter hex) dari link `?ref=` (atau alamat nol).
 
 2. Cek hasil preview bersama manusia: nilai yang dikirim harus **0 BNB**,
    tujuan harus kontrak di atas, dan tidak boleh ada approval token/NFT.
@@ -35,6 +35,36 @@ referrer = wallet pengundang dari link `?ref=` (atau alamat nol).
 ```
 baw contract-call execute --requestId <requestId dari preview> --json
 ```
+
+## Klaim $SATWA (untuk yang sudah punya kartu)
+
+Setiap kartu Genesis bisa diklaim token **$SATWA** satu kali — dibayar ke
+wallet yang memegang kartu itu saat klaim. Jumlah menurut rarity kartu:
+Common 20.000 · Rare 40.000 · Epic 80.000 · Legendary 200.000 SATWA.
+
+- Token $SATWA: `0xb7C1e85A3D33aa3fac359361F2467fcE5ff66cA3`
+- Kontrak klaim: `0x502777c5Eb992Bb9346ddDa8a3e8b3BA57295eb8`
+
+1. Cek dulu jumlah yang bisa diklaim (read-only, tanpa transaksi):
+   `claimable(uint256 tokenId)` — selector `0xd1d58b25`, argumen = ID kartumu.
+   Hasil 0 berarti kartu itu sudah pernah diklaim.
+2. Preview klaim (simulasi):
+
+```
+baw contract-call preview --binanceChainId 56 --from <alamat agent wallet> \
+  --to 0x502777c5Eb992Bb9346ddDa8a3e8b3BA57295eb8 \
+  --data <calldata claim(tokenId)> --json
+```
+
+Calldata `claim(uint256)` — selector `0x379607f5`, diikuti ID kartu sebagai
+uint256 (32 byte hex). Nilai yang dikirim harus **0 BNB** (hanya gas), tidak
+boleh ada approval apa pun. Kalau ada nilai keluar selain gas atau peringatan
+risiko: **berhenti**.
+
+3. Execute dengan requestId dari preview, sama seperti mint.
+
+Catatan: klaim tercatat per ID kartu, bukan per wallet — kalau kartu berpindah
+tangan sebelum diklaim, pemilik barulah yang bisa mengklaimnya.
 
 ## Aturan keselamatan
 
