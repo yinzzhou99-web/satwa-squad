@@ -1,0 +1,50 @@
+{
+  "name": "Komodo Guardian #123 — Satwa Squad Genesis",
+  "description": "Satwa Squad Genesis — free-mint NFT for Binance Agent ID (.ai) holders on BNB Chain. Mint price 0, gas only. Collectible only; no promise of value.",
+  "image": "https://yinzzhou99-web.github.io/satwa-squad/image/123.svg",
+  "external_url": "https://yinzzhou99-web.github.io/satwa-squad/",
+  "attributes": [
+    {
+      "trait_type": "Class",
+      "value": "Komodo Guardian"
+    },
+    {
+      "trait_type": "Habitat",
+      "value": "Jungle"
+    },
+    {
+      "trait_type": "Role",
+      "value": "Guardian"
+    },
+    {
+      "trait_type": "Rarity",
+      "value": "Common"
+    },
+    {
+      "trait_type": "Power",
+      "value": 73
+    },
+    {
+      "trait_type": "Defense",
+      "value": 43
+    },
+    {
+      "trait_type": "Speed",
+      "value": 59
+    },
+    {
+      "trait_type": "Luck",
+      "value": 99
+    }
+  ],
+  "satwa": {
+    "classArt": "https://yinzzhou99-web.github.io/satwa-squad/images/jungle-guardian.png",
+    "stats": {
+      "power": 73,
+      "defense": 43,
+      "speed": 59,
+      "luck": 99,
+      "rarity": 0
+    }
+  }
+}
