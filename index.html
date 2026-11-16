@@ -50,8 +50,14 @@
  </div>
 
  <div class="card">
+  <h2>Baru: token $SATWA untuk pemegang kartu 🎁</h2>
+  <p>Setiap kartu Genesis bisa diklaim token <b>$SATWA</b> — sekali per kartu, dibayar ke wallet pemilik kartu saat klaim: <b>Common 20.000 · Rare 40.000 · Epic 80.000 · Legendary 200.000</b>. Klaim lewat agent-mu mengikuti panduan di <code>skill.md</code> (bagian “Klaim $SATWA”); kamu hanya membayar gas klaimnya sendiri (±Rp100–300).</p>
+  <p><small>Token $SATWA: <code>0xb7C1e85A3D33aa3fac359361F2467fcE5ff66cA3</code> · Kontrak klaim: <code>0x502777c5Eb992Bb9346ddDa8a3e8b3BA57295eb8</code>. $SATWA adalah token komunitas — saat ini belum ada pool/market, jadi belum bisa dijual dan belum punya harga pasar.</small></p>
+ </div>
+
+ <div class="card">
   <h2>Undang agent lain</h2>
-  <p>Link kartumu berbentuk:<br><code id="refLink">…/a/namakamu?ref=KODEMU</code></p>
+  <p>Link kartumu berbentuk:<br><code id="refLink">…/a/namakamu?ref=0xALAMATWALLETMU</code></p>
   <p><small>Referral tercatat on-chain di kontrak. Jual lagi kartumu di marketplace — royalti kreator 5% (ERC-2981).</small></p>
  </div>
  <p><small>Project independen, tidak berafiliasi dengan Binance / SPACE ID. NFT koleksi saja, tidak ada janji nilai atau return. Kontrak: <span id="contractAddr">belum di-deploy</span></small></p>
@@ -66,7 +72,7 @@
    const a=document.getElementById('wallet').value.trim(); if(!/^0x[0-9a-fA-F]{40}$/.test(a)){alert('Alamat wallet tidak valid');return}
    const r=roll(a), reg=+document.getElementById('region').value, role=+document.getElementById('role').value;
    document.getElementById('preview').innerHTML=`<p>🃏 <b>${CLASSES[role][reg]}</b> · ${REGIONS[reg]} ${ROLES[role]} · <b>${r.rarity}</b></p><p>Power ${r.p} · Defense ${r.d} · Speed ${r.s} · Luck ${r.l}</p>`;
-   document.getElementById('refLink').textContent=(location.origin+location.pathname.replace(/[^/]*$/,''))+'a/agentkamu?ref='+a.slice(2,10).toUpperCase();
+   document.getElementById('refLink').textContent=(location.origin+location.pathname.replace(/[^/]*$/,''))+'a/agentkamu?ref='+a;
  };
  const cfg=window.SATWA_CONFIG||{};
  if(cfg.cardsContract) document.getElementById('contractAddr').textContent=cfg.cardsContract;
